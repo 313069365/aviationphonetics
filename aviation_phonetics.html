@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>民航陆空通话 - 字母与数字发音</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 100%);
+    min-height: 100vh;
+    color: #fff;
+    padding: 30px 20px;
+  }
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #8ab4f8;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+    transition: background 0.3s;
+  }
+  .status-dot.on { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+  .status-dot.off { background: #f44336; box-shadow: 0 0 6px #f44336; }
+  .status-dot.local { background: #ff9800; box-shadow: 0 0 6px #ff9800; }
+  #toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 99;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 6px;
+    letter-spacing: 2px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #8ab4f8;
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+  .section-title {
+    font-size: 20px;
+    margin: 30px 0 16px 12px;
+    color: #8ab4f8;
+    border-left: 4px solid #4a90d9;
+    padding-left: 12px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .card:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: #4a90d9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74,144,217,0.2);
+  }
+  .card:active {
+    transform: scale(0.95);
+  }
+  .card .char {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .card .phonetic {
+    font-size: 12px;
+    color: #8ab4f8;
+    font-family: "Times New Roman", serif;
+  }
+  .card .word {
+    font-size: 14px;
+    color: #a0c4ff;
+    font-weight: 500;
+  }
+  .mode-tip {
+    text-align: center;
+    font-size: 12px;
+    color: #667;
+    margin-top: 30px;
+  }
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+    .card { padding: 12px 6px; }
+    .card .char { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <div id="toast"></div>
+
+  <div class="status-bar">
+    <span id="status-indicator" class="status-dot"></span>
+    <span id="status-text">检测中...</span>
+  </div>
+
+  <h1>民航空陆通话发音</h1>
+  <p class="subtitle">ICAO 标准字母与数字拼读 — 点击卡片试听</p>
+
+  <div class="section-title">数字 0 – 9</div>
+  <div class="grid" id="digit-grid"></div>
+
+  <div class="section-title">字母 A – Z</div>
+  <div class="grid" id="letter-grid"></div>
+
+  <div class="mode-tip" id="mode-tip"></div>
+
+<script>
+const digits = [
+  { char: '0', word: 'Zero',    phonetic: '/ˈzɪroʊ/' },
+  { char: '1', word: 'One',     phonetic: '/wʌn/'    },
+  { char: '2', word: 'Two',     phonetic: '/tuː/'    },
+  { char: '3', word: 'Three',   phonetic: '/triː/'   },
+  { char: '4', word: 'Four',    phonetic: '/fɔːr/'   },
+  { char: '5', word: 'Five',    phonetic: '/faɪv/'   },
+  { char: '6', word: 'Six',     phonetic: '/sɪks/'   },
+  { char: '7', word: 'Seven',   phonetic: '/ˈsɛvən/' },
+  { char: '8', word: 'Eight',   phonetic: '/eɪt/'    },
+  { char: '9', word: 'Nine',    phonetic: '/naɪn/'   },
+];
+
+const letters = [
+  { char: 'A', word: 'Alfa',     phonetic: '/ˈælfə/'      },
+  { char: 'B', word: 'Bravo',    phonetic: '/ˈbrɑːvoʊ/'   },
+  { char: 'C', word: 'Charlie',  phonetic: '/ˈtʃɑːrli/'   },
+  { char: 'D', word: 'Delta',    phonetic: '/ˈdɛltə/'     },
+  { char: 'E', word: 'Echo',     phonetic: '/ˈɛkoʊ/'      },
+  { char: 'F', word: 'Foxtrot',  phonetic: '/ˈfɒkstrɒt/'  },
+  { char: 'G', word: 'Golf',     phonetic: '/ɡɒlf/'       },
+  { char: 'H', word: 'Hotel',    phonetic: '/hoʊˈtɛl/'    },
+  { char: 'I', word: 'India',    phonetic: '/ˈɪndiə/'     },
+  { char: 'J', word: 'Juliett',  phonetic: '/ˈdʒuːliɛt/'  },
+  { char: 'K', word: 'Kilo',     phonetic: '/ˈkiːloʊ/'    },
+  { char: 'L', word: 'Lima',     phonetic: '/ˈliːmə/'     },
+  { char: 'M', word: 'Mike',     phonetic: '/maɪk/'       },
+  { char: 'N', word: 'November', phonetic: '/noʊˈvɛmbər/' },
+  { char: 'O', word: 'Oscar',    phonetic: '/ˈɒskər/'     },
+  { char: 'P', word: 'Papa',     phonetic: '/pəˈpɑː/'     },
+  { char: 'Q', word: 'Quebec',   phonetic: '/kɛˈbɛk/'     },
+  { char: 'R', word: 'Romeo',    phonetic: '/ˈroʊmioʊ/'   },
+  { char: 'S', word: 'Sierra',   phonetic: '/siˈɛrə/'     },
+  { char: 'T', word: 'Tango',    phonetic: '/ˈtæŋɡoʊ/'    },
+  { char: 'U', word: 'Uniform',  phonetic: '/ˈjuːnɪfɔrm/' },
+  { char: 'V', word: 'Victor',   phonetic: '/ˈvɪktər/'    },
+  { char: 'W', word: 'Whiskey',  phonetic: '/ˈwɪski/'     },
+  { char: 'X', word: 'X-ray',    phonetic: '/ˈɛksreɪ/'    },
+  { char: 'Y', word: 'Yankee',   phonetic: '/ˈjæŋki/'     },
+  { char: 'Z', word: 'Zulu',     phonetic: '/ˈzuːluː/'    },
+];
+
+// ---- playback mode ----
+// 0 = testing; 1 = online (Youdao); 2 = local (SpeechSynthesis); -1 = unavailable
+let mode = 0;
+const modeNames = ['', '在线音源', '本地语音', '不可用'];
+
+const statusEl = document.getElementById('status-text');
+const dotEl = document.getElementById('status-indicator');
+const tipEl = document.getElementById('mode-tip');
+
+function setStatus(level, msg) {
+  const cls = ['off', 'on', 'local', 'off'][Math.max(0, level + 1)];
+  dotEl.className = 'status-dot ' + cls;
+  statusEl.textContent = msg;
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show';
+  clearTimeout(window._toast);
+  window._toast = setTimeout(() => el.className = '', 2000);
+}
+
+// ---- online playback via Youdao dictvoice API (works in China) ----
+function playOnline(text) {
+  return new Promise((resolve, reject) => {
+    const url = 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=2';
+    const audio = new Audio(url);
+    audio.addEventListener('canplaythrough', () => resolve(audio), { once: true });
+    audio.addEventListener('error', reject, { once: true });
+    audio.play().catch(reject);
+  });
+}
+
+// ---- local playback via SpeechSynthesis ----
+function playLocal(text) {
+  return new Promise((resolve, reject) => {
+    if (!window.speechSynthesis) return reject('no api');
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    u.rate = 0.85;
+    const voices = window.speechSynthesis.getVoices();
+    const en = voices.find(v => v.lang.startsWith('en'));
+    if (en) u.voice = en;
+    u.onend = resolve;
+    u.onerror = () => reject('speech error');
+    window.speechSynthesis.speak(u);
+  });
+}
+
+function speak(text) {
+  if (mode === -1) { toast('当前设备无任何可用的发音方式'); return; }
+  if (mode === 0)  { toast('发音引擎尚未就绪，请稍候'); return; }
+
+  if (mode === 1) {
+    playOnline(text).catch(() => {
+      playLocal(text).catch(() => toast('发音失败'));
+    });
+  } else {
+    playLocal(text).catch(() => {
+      playOnline(text).catch(() => toast('发音失败'));
+    });
+  }
+}
+
+// ---- detect best mode ----
+function init() {
+  const hasSpeech = !!window.speechSynthesis;
+
+  // try online first – if it passes, use online; else fall back to local
+  const probe = new Audio(
+    'https://dict.youdao.com/dictvoice?audio=test&type=2'
+  );
+
+  let onlineOk = false;
+
+  const onlineProbe = () => {
+    probe.addEventListener('canplaythrough', () => {
+      onlineOk = true;
+      finish(true);
+    }, { once: true });
+    probe.addEventListener('error', () => finish(false), { once: true });
+    probe.play().catch(() => finish(false));
+  };
+
+  const finish = (online) => {
+    if (online) {
+      mode = 1;
+      setStatus(1, '在线音源 · 已就绪');
+      tipEl.textContent = '当前使用有道词典在线语音，需要网络连接';
+    } else if (hasSpeech) {
+      // wait for voices
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        const en = voices.find(v => v.lang.startsWith('en'));
+        if (en) {
+          mode = 2;
+          setStatus(2, '本地语音 · 已就绪');
+          tipEl.textContent = '当前使用浏览器本地语音合成';
+        } else {
+          mode = 2;
+          setStatus(2, '本地语音 · 无英文语音');
+          tipEl.textContent = '未找到英文语音，发音可能不标准';
+        }
+      } else {
+        window.speechSynthesis.onvoiceschanged = () => {
+          const v = window.speechSynthesis.getVoices();
+          const en = v.find(vo => vo.lang.startsWith('en'));
+          mode = 2;
+          setStatus(2, en ? '本地语音 · 已就绪' : '本地语音 · 无英文语音');
+          tipEl.textContent = en ? '当前使用浏览器本地语音合成' : '未找到英文语音，发音可能不标准';
+        };
+        setTimeout(() => {
+          if (mode === 0) {
+            mode = 2;
+            setStatus(2, '本地语音 · 已就绪');
+            tipEl.textContent = '当前使用浏览器本地语音合成';
+          }
+        }, 2000);
+      }
+    } else {
+      mode = -1;
+      setStatus(-1, '无可用发音方式');
+      tipEl.textContent = '当前设备不支持任何发音方式';
+    }
+  };
+
+  onlineProbe();
+}
+
+init();
+
+function render(list, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = list.map(item => `
+    <div class="card" data-text="${item.word}">
+      <div class="char">${item.char}</div>
+      <div class="word">${item.word}</div>
+      <div class="phonetic">${item.phonetic}</div>
+    </div>
+  `).join('');
+  container.addEventListener('click', e => {
+    const card = e.target.closest('.card');
+    if (card) speak(card.dataset.text);
+  });
+}
+
+render(digits, 'digit-grid');
+render(letters, 'letter-grid');
+</script>
+</body>
+</html>
