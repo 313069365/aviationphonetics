@@ -369,10 +369,18 @@
       const char = wordToChar[text]
       if (!char) return Promise.reject('no local file')
       return new Promise((resolve, reject) => {
-        const audio = new Audio(AUDIO_DATA[char])
+        const tryBase64 = () => {
+          const data = AUDIO_DATA[char]
+          if (!data) return reject('no base64 data')
+          const audio = new Audio(data)
+          audio.addEventListener('ended', resolve, { once: true })
+          audio.addEventListener('error', reject, { once: true })
+          audio.play().catch(reject)
+        }
+        const audio = new Audio('phonetics/' + char + '.mp3')
         audio.addEventListener('ended', resolve, { once: true })
-        audio.addEventListener('error', reject, { once: true })
-        audio.play().catch(reject)
+        audio.addEventListener('error', tryBase64, { once: true })
+        audio.play().catch(tryBase64)
       })
     }
 
